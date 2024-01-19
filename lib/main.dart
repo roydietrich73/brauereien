@@ -9,14 +9,14 @@ void main() {
 }
 
 
-Future<Album> fetchAlbum() async {
+Future<List<Album>> fetchAlbum() async {
   final response = await 
       get(Uri.parse('https://api.openbrewerydb.org/v1/breweries/random'));
+     
 
   if (response.statusCode == 200) {
-    return Album.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return [Album.fromJson(jsonDecode(response.body)[0] as Map<String, dynamic>)];
   } else {
-  
     throw Exception('Fehler beim laden');
   }
 }
@@ -33,19 +33,8 @@ class Album {
   });
 
   factory Album.fromJson(Map<String, dynamic> json) {
-    return switch (json) {
-      {
-        'Name': String name,
-        'Stadt': String stadt,
-        'Staat': String staat,
-      } =>
-        const Album(
-          name: 'Name',
-          stadt: 'Stadt',
-          staat: 'Staat',
-        ),
-      _ => throw const FormatException('Fehler beim laden'),
-    };
+    Album album = Album(name: json["name"], stadt: json["city"], staat: json["state"]);
+    return album;
   }
 }
 
@@ -59,14 +48,21 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late Future<Album> futureAlbum;
-  
-  var backgroundColor;
+ 
+ late Future<List<Album>> album = fetchAlbum();
 
   @override
   void initState() {
     super.initState();
-    futureAlbum = fetchAlbum();
+    getAlbumFromAPI();
+  }
+
+  Future<void> getAlbumFromAPI() async {
+      album = Future(fetchAlbum);
+      print("Führe methode aus!");
+    setState((){
+   
+    });
   }
 
   @override
@@ -78,29 +74,31 @@ class _MyAppState extends State<MyApp> {
         title: const Text('Brauereien'),
        ),
          body: Center(
-              child: Padding(
+            child: Padding(
             padding: const EdgeInsets.all(32.0),
              child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-              FutureBuilder<Album>(
-              future: futureAlbum,
+            children: [
+              FutureBuilder<List<Album>>(
+              future: album,
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
-                  return Text(snapshot.data!.name);
+                  final data = snapshot.data![0];
+                  return Text("${data.name} lebt in ${data.stadt}, ${data.staat}");
                 } else if (snapshot.hasError) {
                   return Text('${snapshot.error}');
                 }
                 return const CircularProgressIndicator();
               }),
+              const SizedBox(height: 30,),
               TextButton( 
-             onPressed:() {},
-             child: const Text('neu laden'),),
-            ],
-            ),                  
-           ),
-         ),          
+              onPressed:() => getAlbumFromAPI(),
+              child: const Text('neu laden'),),
+             ],
+            ),
+          ),
         ),
+      ),
     );
   }
 }
